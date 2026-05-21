@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Blockscout
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
 interface CustomStatConfig {
   url: string;
@@ -8,7 +8,7 @@ interface CustomStatConfig {
   jsonPath: string;
 }
 
-const handler = async(req: NextApiRequest, res: NextApiResponse) => {
+export async function GET(req: NextRequest) {
   let configs: Array<CustomStatConfig>;
   try {
     // eslint-disable-next-line no-restricted-properties
@@ -19,38 +19,32 @@ const handler = async(req: NextApiRequest, res: NextApiResponse) => {
     const raw = JSON.parse(readFileSync(configPath, 'utf-8')) as unknown;
     configs = Array.isArray(raw) ? raw as Array<CustomStatConfig> : [ raw as CustomStatConfig ];
   } catch (e) {
-    res.status(500).json({ error: 'Failed to read config' });
-    return;
+    return NextResponse.json({ error: 'Failed to read config' }, { status: 500 });
   }
 
-  const indexParam = req.query.index;
-  const index = indexParam !== undefined ? Number(indexParam) : 0;
+  const { searchParams } = new URL(req.url);
+  const indexParam = searchParams.get('index');
+  const index = indexParam !== null ? Number(indexParam) : 0;
 
   if (isNaN(index) || index < 0 || index >= configs.length) {
-    res.status(404).json({ error: 'Stat index out of range' });
-    return;
+    return NextResponse.json({ error: 'Stat index out of range' }, { status: 404 });
   }
 
   const config = configs[index];
 
   if (!config.url) {
-    res.status(204).end();
-    return;
+    return new NextResponse(null, { status: 204 });
   }
 
   try {
     const upstream = await fetch(config.url);
     if (!upstream.ok) {
-      res.status(upstream.status).json({ error: `Upstream returned ${ upstream.status }` });
-      return;
+      return NextResponse.json({ error: `Upstream returned ${ upstream.status }` }, { status: upstream.status });
     }
     const data = await upstream.json() as unknown;
-    // Normalize primitives so jsonPath always works on an object.
     const normalized = (typeof data === 'object' && data !== null) ? data : { value: data };
-    res.status(200).json(normalized);
+    return NextResponse.json(normalized);
   } catch {
-    res.status(502).json({ error: 'Failed to fetch upstream' });
+    return NextResponse.json({ error: 'Failed to fetch upstream' }, { status: 502 });
   }
-};
-
-export default handler;
+}
