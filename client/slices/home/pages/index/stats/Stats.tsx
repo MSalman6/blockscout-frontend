@@ -24,6 +24,7 @@ import { WEI } from 'ui/shared/value/utils';
 import LatestBatchStatsWidget from './LatestBatchStatsWidget';
 import LatestBlockStatsWidget from './LatestBlockStatsWidget';
 import StatsDegraded from './StatsDegraded';
+import CustomStatWidget from './CustomStatWidget';
 
 const rollupFeature = config.features.rollup;
 const isOptimisticRollup = rollupFeature.isEnabled && rollupFeature.type === 'optimistic';
@@ -216,6 +217,7 @@ const Stats = () => {
           />
         );
       }) }
+      <CustomStatWidget/>
     </Grid>
   );
 };
